@@ -1,55 +1,97 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    {% load static %}
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Exam Result — {{ course.name }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body { background: #f8f9fa; }
+        .result-header {
+            background: linear-gradient(135deg, #198754, #0d6efd);
+            color: white; padding: 40px 0; margin-bottom: 30px;
+        }
+        .result-header.failed {
+            background: linear-gradient(135deg, #dc3545, #fd7e14);
+        }
+        .question-result { margin-bottom: 20px; }
+        .correct-choice { color: #198754; font-weight: bold; }
+        .wrong-choice { color: #dc3545; }
+        .selected-choice { background: #e8f5e9; border-radius: 6px; padding: 2px 8px; }
+    </style>
 </head>
 <body>
 
- <nav class="navbar navbar-light bg-light">
-    <div class="container-fluid">
-        <div class="navbar-header">
-              <a class="navbar-brand" href="{% url 'onlinecourse:index' %}">Home</a>
-        </div>
-        <ul class="nav navbar-nav navbar-right">
-            {% if user.is_authenticated %}
-            <li>
-                <a class="btn btn-link" href="#">{{ user.first_name }}({{ user.username }})</a>
-                <a class="btn btn-link" href="{% url 'onlinecourse:logout' %}">Logout</a>
-            </li>
-            {% else %}
-            <li>
-                <form class="form-inline" action="{% url 'onlinecourse:login' %}" method="post">
-                    {% csrf_token %}
-                    <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Username" name="username" >
-                        <input type="password" class="form-control" placeholder="Username" name="psw" >
-                        <button class="btn btn-primary" type="submit">Login</button>
-                        <a class="btn btn-link" href="{% url 'onlinecourse:registration' %}">Sign Up</a>
-                    </div>
-                </form>
-            </li>
-            {% endif %}
-        </ul>
-    </div>
-</nav>
+{% include "onlinecourse/nav_bootstrap.html" %}
 
-<div class="container-fluid">
-    {% if grade > 80 %}
+{% if total_score >= 80 %}
+<div class="result-header">
+    <div class="container text-center">
+        <h1>🎉 Congratulations!</h1>
+        <p class="lead">You passed the exam for <strong>{{ course.name }}</strong></p>
+        <h2 class="display-4">Your Score: {{ total_score }}%</h2>
+    </div>
+</div>
+{% else %}
+<div class="result-header failed">
+    <div class="container text-center">
+        <h1>📊 Exam Result</h1>
+        <p class="lead">You did not pass the exam for <strong>{{ course.name }}</strong></p>
+        <h2 class="display-4">Your Score: {{ total_score }}%</h2>
+    </div>
+</div>
+{% endif %}
+
+<div class="container my-3">
+    {% if total_score >= 80 %}
     <div class="alert alert-success">
-       <!--HINT Display passed info -->
+       <strong>Congratulations at {{ request.user.first_name|default:request.user.username }}!</strong> You have passed the exam and completed the course with score {{ total_score }}/100.
     </div>
-        {% else %}
-        <div class="alert alert-danger">
-            <!--HINT Display failed info -->
-        </div>
-        <a class="btn btn-link text-danger" href="{% url 'onlinecourse:course_details' course.id %}">Re-test</a>
-        {% endif %}
-        <div class="card-columns-vertical mt-1">
-        <h5 class="">Exam results</h5>
-            <!--HINT Display exam results-->
+    {% else %}
+    <div class="alert alert-danger">
+       <strong>Failed:</strong> Sorry, {{ request.user.first_name|default:request.user.username }}! You did not pass the exam with score {{ total_score }}/100.
+    </div>
+    <a class="btn btn-link text-danger" href="{% url 'onlinecourse:course_details' course.id %}">Re-test</a>
+    {% endif %}
+</div>
+
+
+<div class="container">
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h3 class="card-title">Exam Results</h3>
+            {% for question in questions %}
+            <div class="question-result card mb-3 p-3">
+                <h5>Q{{ forloop.counter }}: {{ question.content }}
+                    <span class="badge bg-secondary float-end">{{ question.grade }} pts</span>
+                </h5>
+                {% for choice in question.choice_set.all %}
+                <div class="ms-3">
+                    {% if choice in submitted_choices.all %}
+                        {% if choice.is_correct %}
+                        <span class="correct-choice selected-choice">✅ {{ choice.content }} (Your Answer — Correct)</span>
+                        {% else %}
+                        <span class="wrong-choice selected-choice">❌ {{ choice.content }} (Your Answer — Wrong)</span>
+                        {% endif %}
+                    {% else %}
+                        {% if choice.is_correct %}
+                        <span class="correct-choice">✔ {{ choice.content }} (Correct Answer)</span>
+                        {% else %}
+                        <span class="text-muted">{{ choice.content }}</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
         </div>
     </div>
+    <a href="{% url 'onlinecourse:course_details' course.id %}" class="btn btn-primary">
+        ↩ Back to Course
+    </a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
